@@ -1,0 +1,4 @@
+aiogram.dispatcher - INFO - Start polling
+aiogram.dispatcher - INFO - Run polling for bot @parseInvest_test_bot id=6614172054 - 'Hello Test'
+aiogram.event - INFO - Update id=826590257 is handled. Duration 233 ms by bot id=6614172054
+aiogram.dispatcher - INFO - Polling stopped

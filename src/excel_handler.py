@@ -39,6 +39,43 @@ def get_data(file):
     return result
 
 
+def get_data_all(file):
+    xl = pd.read_excel(file)
+    result = []
+    keyword_row_indices = xl.index[xl['Unnamed: 0'] == 'Ключевое слово'].tolist()
+    keyword_row_indices.append(len(xl))
+
+    for i in range(len(keyword_row_indices) - 1):
+        start_row = keyword_row_indices[i] + 1
+        end_row = keyword_row_indices[i + 1] - 5
+        block = xl.iloc[start_row:end_row]
+
+        shop_index = keyword_row_indices[i] - 4
+        article_index = keyword_row_indices[i] - 2
+        date_row_index = keyword_row_indices[i]
+
+        shop = xl.iloc[shop_index, 2]
+        article = xl.iloc[article_index, 2]
+        date_columns = xl.iloc[date_row_index, 7:].dropna().index.tolist()
+
+        for j in range(len(block)):
+            row = block.iloc[j]
+            keyword = row[0]
+            frequency = row[5]
+            for date_col in date_columns:
+                try:
+                    value = row[date_col]
+                    numeric_value = pd.to_numeric(value, errors='coerce')
+
+                    if numeric_value is not None and not pd.isna(numeric_value):
+                        date = xl.loc[date_row_index, date_col]
+                        result.append([date, shop, article, keyword, frequency, numeric_value])
+                except Exception as e:
+                    logging.exception("Value error:", e)
+
+    return result
+
+
 def created_report(data):
     columns = ['Дата', 'Магазин', 'Артикул', 'Ключевое слово', 'Частота WB', 'Позиция']
 
@@ -71,8 +108,8 @@ def created_report(data):
     book.save(output_file)
 
 
-def process_excels():
-    directory_path = 'reports'
+def process_excels(directory):
+    directory_path = directory
 
     file_pattern = os.path.join(directory_path, "*.xls*")
     files = glob.glob(file_pattern)
@@ -80,7 +117,10 @@ def process_excels():
     data = []
     for file in files:
         try:
-            data.extend(get_data(file))
+            if directory_path == 'reports_all':
+                data.extend(get_data_all(file))
+            else:
+                data.extend(get_data(file))
         except Exception as e:
             logging.exception(f"File error: {e}")
             continue

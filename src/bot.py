@@ -9,42 +9,49 @@ from aiogram.filters import StateFilter
 
 from config import API_TOKEN_BOT
 from excel_handler import clear_directory, process_excels
+from str import creat_directories
 
 router = Router()
 
 
-class FileReports(StatesGroup):
+class FileReportsSku(StatesGroup):
     files = State()
 
 
-class FileReport(StatesGroup):
-    file = State()
+class FileReportGroup(StatesGroup):
+    files = State()
 
 
 @router.message(Command('load_sku'))
 async def load(message: Message, state: FSMContext):
-    await message.answer('Пришлите пожалуйста файлы отчетов в формате .xls или .xlxs\n'
-                         'По завершению напишите мне слово <code>Стоп</code>', parse_mode='html')
-    clear_directory('reports')
-    clear_directory('ready_report')
-    await state.set_state(FileReports.files)
+    await message.answer('Пришлите файлы отчетов по <b>sku</b> в формате .xls или .xlxs\n'
+                         'По завершению напишите мне слово:\n<code>Стоп</code>', parse_mode='html')
+    user_id = message.from_user.id
+    creat_directories(user_id)
+    clear_directory(f'reports/{user_id}/reports_sku')
+    clear_directory(f'reports/{user_id}/ready_reports_sku')
+    await state.set_state(FileReportsSku.files)
 
 
 @router.message(Command('load_group'))
 async def load(message: Message, state: FSMContext):
-    await message.answer('Пришлите пожалуйста один фай отчета в формате .xls или .xlxs', parse_mode='html')
-    clear_directory('reports_all')
-    clear_directory('ready_report')
-    await state.set_state(FileReport.file)
+    await message.answer('Пришлите файлы отчетов по <b>group</b> в формате .xls или .xlxs\n'
+                         'По завершению напишите мне слово:\n<code>Стоп</code>', parse_mode='html')
+    user_id = message.from_user.id
+    creat_directories(user_id)
+    clear_directory(f'reports/{user_id}/reports_group')
+    clear_directory(f'reports/{user_id}/ready_reports_group')
+    await state.set_state(FileReportGroup.files)
 
 
-@router.message(StateFilter(FileReports.files))
+@router.message(StateFilter(FileReportsSku.files))
 async def accepting_files(message: Message, state: FSMContext):
+    user_id = message.from_user.id
     if message.text and message.text.lower() == 'стоп':
         await state.clear()
-        status = process_excels('reports')
+        status = process_excels('reports_sku', user_id)
         if status == 'файл создан':
-            file = FSInputFile('ready_report/report.xlsx', filename='report.xlsx')
+            file = FSInputFile(f'reports/{user_id}/ready_reports_sku/report.xlsx', filename='report.xlsx')
             await message.bot.send_document(chat_id=message.from_user.id, document=file,
                                             caption='Сгенерированный отчет по файлам')
         else:
@@ -60,16 +67,26 @@ async def accepting_files(message: Message, state: FSMContext):
             file = await message.bot.get_file(file_id)
             file_path = file.file_path
 
-            await message.bot.download_file(file_path, f"reports/{file_path[10:]}")
+            await message.bot.download_file(file_path, f"reports/{user_id}/reports_sku/{file_path[10:]}")
             await message.answer("Файл Excel успешно получен и сохранен.")
         else:
             await message.answer('Вы прислали файл не того формата\n'
                                  'Пожалуйста, отправьте файл формата .xlsx или .xls.')
 
 
-@router.message(StateFilter(FileReport.file))
+@router.message(StateFilter(FileReportGroup.files))
 async def accepting_file(message: Message, state: FSMContext):
-    await state.clear()
+    user_id = message.from_user.id
+    if message.text and message.text.lower() == 'стоп':
+        await state.clear()
+        status = process_excels('reports_group', user_id)
+        if status == 'файл создан':
+            file = FSInputFile(f'reports/{user_id}/ready_reports_group/report.xlsx', filename='report.xlsx')
+            await message.bot.send_document(chat_id=message.from_user.id, document=file,
+                                            caption='Сгенерированный отчет по файлам')
+        else:
+            await message.answer(status)
+        return
 
     if message.document:
         mime_type = message.document.mime_type
@@ -80,22 +97,14 @@ async def accepting_file(message: Message, state: FSMContext):
             file = await message.bot.get_file(file_id)
             file_path = file.file_path
 
-            await message.bot.download_file(file_path, f"reports_all/{file_path[10:]}")
+            await message.bot.download_file(file_path, f"reports/{user_id}/reports_group/{file_path[10:]}")
+            await message.answer("Файл Excel успешно получен и сохранен.")
         else:
             await message.answer('Вы прислали файл не того формата\n'
                                  'Пожалуйста, отправьте файл формата .xlsx или .xls.')
     else:
         await message.answer("Вы прислали не файл excel")
         return
-
-    status = process_excels('reports_all')
-    if status == 'файл создан':
-        file = FSInputFile('ready_report/report.xlsx', filename='report.xlsx')
-        await message.bot.send_document(chat_id=message.from_user.id, document=file,
-                                        caption='Сгенерированный отчет по файлам')
-    else:
-        await message.answer(status)
-    return
 
 
 async def start_bot():

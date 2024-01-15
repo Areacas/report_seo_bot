@@ -76,7 +76,7 @@ def get_data_all(file):
     return result
 
 
-def created_report(data):
+def created_report(data, directory_path, user_id):
     columns = ['Дата', 'Магазин', 'Артикул', 'Ключевое слово', 'Частота WB', 'Позиция']
 
     df = pd.DataFrame(data, columns=columns)
@@ -84,7 +84,7 @@ def created_report(data):
     df_sorted = df.sort_values(by='Дата')
     df_sorted['Дата'] = pd.to_datetime(df_sorted['Дата'])
 
-    output_file = 'ready_report/report.xlsx'
+    output_file = f'reports/{user_id}/ready_{directory_path}/report.xlsx'
     df_sorted.to_excel(output_file, index=False, engine='openpyxl')
 
     book = openpyxl.load_workbook(output_file)
@@ -108,16 +108,16 @@ def created_report(data):
     book.save(output_file)
 
 
-def process_excels(directory):
+def process_excels(directory, user_id):
     directory_path = directory
 
-    file_pattern = os.path.join(directory_path, "*.xls*")
+    file_pattern = os.path.join(f'reports/{user_id}/{directory_path}', "*.xls*")
     files = glob.glob(file_pattern)
 
     data = []
     for file in files:
         try:
-            if directory_path == 'reports_all':
+            if directory_path == 'reports_group':
                 data.extend(get_data_all(file))
             else:
                 data.extend(get_data(file))
@@ -125,7 +125,7 @@ def process_excels(directory):
             logging.exception(f"File error: {e}")
             continue
     try:
-        created_report(data)
+        created_report(data, directory_path, user_id)
     except Exception as e:
         logging.exception(f'файл не создан {e}')
         return f'файл не создан {e}'

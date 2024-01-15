@@ -10,11 +10,8 @@ async def main():
                         level=logging.INFO,
                         format='%(name)s - %(levelname)s - %(message)s')
 
-    directories = ["reports", "reports_all", "ready_report"]
-
-    for directory in directories:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+    if not os.path.exists("reports"):
+        os.makedirs("reports")
 
     await start_bot()
 

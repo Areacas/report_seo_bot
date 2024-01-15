@@ -21,7 +21,7 @@ class FileReport(StatesGroup):
     file = State()
 
 
-@router.message(Command('load'))
+@router.message(Command('load_sku'))
 async def load(message: Message, state: FSMContext):
     await message.answer('Пришлите пожалуйста файлы отчетов в формате .xls или .xlxs\n'
                          'По завершению напишите мне слово <code>Стоп</code>', parse_mode='html')
@@ -30,7 +30,7 @@ async def load(message: Message, state: FSMContext):
     await state.set_state(FileReports.files)
 
 
-@router.message(Command('load1'))
+@router.message(Command('load_group'))
 async def load(message: Message, state: FSMContext):
     await message.answer('Пришлите пожалуйста один фай отчета в формате .xls или .xlxs', parse_mode='html')
     clear_directory('reports_all')
